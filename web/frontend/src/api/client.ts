@@ -72,6 +72,15 @@ export async function getSnapshot() {
   return request<import('@/types/system').SystemSnapshot>('/system/snapshot')
 }
 
+// History
+export async function getHistory() {
+  return request<import('@/types/system').HistoryEntry[]>('/system/history')
+}
+
+export async function clearHistory() {
+  return request<{ status: string }>('/system/history', { method: 'DELETE' })
+}
+
 // Power
 export async function systemPower(action: 'shutdown' | 'reboot') {
   return request<{ status: string }>('/system/power', {

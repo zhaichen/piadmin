@@ -18,6 +18,7 @@ type SystemSnapshot struct {
 	Disks       []DiskInfo        `json:"disks"`
 	Network     []NetworkInfo     `json:"network"`
 	Temperature []TemperatureInfo `json:"temperature"`
+	Voltage     VoltageInfo       `json:"voltage"`
 }
 
 type Collector struct {
@@ -27,13 +28,15 @@ type Collector struct {
 	subs     map[chan *SystemSnapshot]struct{}
 	subsMu   sync.Mutex
 	stopCh   chan struct{}
+	history  *HistoryBuffer
 }
 
-func NewCollector(interval time.Duration) *Collector {
+func NewCollector(interval time.Duration, historySize int) *Collector {
 	return &Collector{
 		interval: interval,
 		subs:     make(map[chan *SystemSnapshot]struct{}),
 		stopCh:   make(chan struct{}),
+		history:  NewHistoryBuffer(historySize),
 	}
 }
 
@@ -70,6 +73,9 @@ func (c *Collector) collect() {
 	collectDisk(snap)
 	collectNetwork(snap)
 	collectTemperature(snap)
+	collectVoltage(snap)
+
+	c.history.Add(snap.Timestamp, snap.Temperature, snap.Voltage)
 
 	c.mu.Lock()
 	c.snapshot = snap
@@ -97,6 +103,14 @@ func (c *Collector) Unsubscribe(ch chan *SystemSnapshot) {
 	delete(c.subs, ch)
 	c.subsMu.Unlock()
 	close(ch)
+}
+
+func (c *Collector) GetHistory() []HistoryEntry {
+	return c.history.Get()
+}
+
+func (c *Collector) ClearHistory() {
+	c.history.Clear()
 }
 
 func (c *Collector) publish(snap *SystemSnapshot) {

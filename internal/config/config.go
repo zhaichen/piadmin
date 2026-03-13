@@ -28,7 +28,8 @@ type AuthConfig struct {
 }
 
 type MonitorConfig struct {
-	Interval int `yaml:"interval"`
+	Interval    int `yaml:"interval"`
+	HistorySize int `yaml:"history_size"`
 }
 
 func (c *Config) MonitorInterval() time.Duration {
@@ -50,7 +51,8 @@ func defaults() *Config {
 			TokenTTL: 86400,
 		},
 		Monitor: MonitorConfig{
-			Interval: 2,
+			Interval:    2,
+			HistorySize: 300,
 		},
 	}
 }
@@ -96,6 +98,11 @@ func applyEnv(cfg *Config) {
 	if v := os.Getenv("PIADMIN_MONITOR_INTERVAL"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			cfg.Monitor.Interval = n
+		}
+	}
+	if v := os.Getenv("PIADMIN_HISTORY_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.Monitor.HistorySize = n
 		}
 	}
 }

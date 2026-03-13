@@ -38,6 +38,8 @@ func NewRouter(cfg *config.Config, a *auth.Auth, collector *monitor.Collector, a
 
 		// System monitoring
 		r.Get("/api/system/snapshot", sh.GetSnapshot)
+		r.Get("/api/system/history", sh.GetHistory)
+		r.Delete("/api/system/history", sh.ClearHistory)
 		r.Get("/api/ws/monitor", wh.Monitor)
 
 		// System management

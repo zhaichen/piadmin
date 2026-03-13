@@ -11,6 +11,7 @@ export interface SystemSnapshot {
   disks: DiskInfo[]
   network: NetworkInfo[]
   temperature: TemperatureInfo[]
+  voltage: VoltageInfo
 }
 
 export interface CPUInfo {
@@ -51,6 +52,32 @@ export interface NetworkInfo {
 export interface TemperatureInfo {
   sensor_key: string
   temperature: number
+}
+
+export interface VoltageInfo {
+  core: number
+  sdram_c: number
+  sdram_i: number
+  sdram_p: number
+  throttle: ThrottleInfo
+}
+
+export interface ThrottleInfo {
+  raw: number
+  under_voltage: boolean
+  freq_capped: boolean
+  throttled: boolean
+  soft_temp_limit: boolean
+  under_voltage_occurred: boolean
+  freq_capped_occurred: boolean
+  throttled_occurred: boolean
+  soft_temp_limit_occurred: boolean
+}
+
+export interface HistoryEntry {
+  timestamp: string
+  temperature: TemperatureInfo[]
+  voltage: VoltageInfo
 }
 
 export interface WSMessage {

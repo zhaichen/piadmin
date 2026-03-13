@@ -30,7 +30,7 @@ func main() {
 
 	cfg := config.Load(*configPath)
 
-	collector := monitor.NewCollector(cfg.MonitorInterval())
+	collector := monitor.NewCollector(cfg.MonitorInterval(), cfg.Monitor.HistorySize)
 	collector.Start()
 	defer collector.Stop()
 

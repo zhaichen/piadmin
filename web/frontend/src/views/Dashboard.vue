@@ -6,6 +6,7 @@ import MemoryBar from '@/components/dashboard/MemoryBar.vue'
 import DiskUsage from '@/components/dashboard/DiskUsage.vue'
 import NetworkTraffic from '@/components/dashboard/NetworkTraffic.vue'
 import Temperature from '@/components/dashboard/Temperature.vue'
+import Voltage from '@/components/dashboard/Voltage.vue'
 
 const { data, connected } = useWebSocket()
 </script>
@@ -30,6 +31,7 @@ const { data, connected } = useWebSocket()
         <CpuGauge :cpu="data.cpu" />
         <MemoryBar :memory="data.memory" />
         <Temperature :temperatures="data.temperature" />
+        <Voltage v-if="data.voltage && data.voltage.core > 0" :voltage="data.voltage" />
         <DiskUsage :disks="data.disks" />
         <NetworkTraffic :network="data.network" class="md:col-span-2 xl:col-span-2" />
       </div>

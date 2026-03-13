@@ -20,3 +20,14 @@ func (h *systemHandler) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(snap)
 }
+
+func (h *systemHandler) GetHistory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(h.collector.GetHistory())
+}
+
+func (h *systemHandler) ClearHistory(w http.ResponseWriter, r *http.Request) {
+	h.collector.ClearHistory()
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
+}

@@ -43,6 +43,12 @@ const option = computed(() => ({
     },
   ],
 }))
+
+function coreColor(usage: number): string {
+  if (usage > 80) return 'bg-red-500'
+  if (usage > 50) return 'bg-amber-500'
+  return 'bg-emerald-500'
+}
 </script>
 
 <template>
@@ -50,6 +56,19 @@ const option = computed(() => ({
     <VChart :option="option" autoresize style="height: 180px" />
     <div class="text-xs text-gray-500 mt-2 text-center">
       {{ cpu.model_name }} &middot; {{ cpu.cores }}C/{{ cpu.threads }}T
+    </div>
+    <div v-if="cpu.usage_per && cpu.usage_per.length > 1" class="mt-3 space-y-1.5">
+      <div v-for="(usage, i) in cpu.usage_per" :key="i" class="flex items-center gap-2 text-xs">
+        <span class="text-gray-500 w-6 text-right shrink-0">{{ i }}</span>
+        <div class="flex-1 h-2.5 bg-slate-700 rounded-full overflow-hidden">
+          <div
+            class="h-full rounded-full transition-all duration-500"
+            :class="coreColor(usage)"
+            :style="{ width: Math.round(usage) + '%' }"
+          />
+        </div>
+        <span class="text-gray-400 w-10 text-right shrink-0">{{ Math.round(usage) }}%</span>
+      </div>
     </div>
   </Card>
 </template>
