@@ -2,8 +2,7 @@ package gpio
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -22,51 +21,41 @@ type PinRequest struct {
 	Value     int    `json:"value"`     // 0 or 1
 }
 
-const gpioBase = "/sys/class/gpio"
-
-func isRaspberryPi() bool {
-	return runtime.GOOS == "linux"
-}
+const gpioChip = "gpiochip0"
 
 func Available() bool {
-	if !isRaspberryPi() {
+	if runtime.GOOS != "linux" {
 		return false
 	}
-	_, err := os.Stat(gpioBase)
+	_, err := exec.LookPath("gpioget")
 	return err == nil
 }
 
 func ListPins() ([]PinInfo, error) {
 	if !Available() {
-		return nil, fmt.Errorf("GPIO not available on this platform")
+		return nil, fmt.Errorf("GPIO not available (gpioget/gpioset not found)")
 	}
 
 	// Common Raspberry Pi GPIO pins (BCM numbering)
 	bcmPins := []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27}
 
+	// Get all line info at once
+	lineInfo := getLineInfo()
+
 	var result []PinInfo
 	for _, pin := range bcmPins {
 		info := PinInfo{Number: pin, Available: true}
 
-		dir := filepath.Join(gpioBase, fmt.Sprintf("gpio%d", pin))
-		if _, err := os.Stat(dir); err != nil {
-			// pin not exported
-			info.Mode = "unexported"
-			info.Available = true
-			result = append(result, info)
-			continue
-		}
-
-		// read direction
-		dirData, err := os.ReadFile(filepath.Join(dir, "direction"))
-		if err == nil {
-			info.Mode = strings.TrimSpace(string(dirData))
-		}
-
-		// read value
-		valData, err := os.ReadFile(filepath.Join(dir, "value"))
-		if err == nil {
-			info.Value, _ = strconv.Atoi(strings.TrimSpace(string(valData)))
+		if li, ok := lineInfo[pin]; ok {
+			info.Mode = li.direction
+			info.Value = li.value
+		} else {
+			info.Mode = "input"
+			// read current value
+			val, err := readPin(pin)
+			if err == nil {
+				info.Value = val
+			}
 		}
 
 		result = append(result, info)
@@ -74,45 +63,99 @@ func ListPins() ([]PinInfo, error) {
 	return result, nil
 }
 
-func ExportPin(pin int) error {
-	dir := filepath.Join(gpioBase, fmt.Sprintf("gpio%d", pin))
-	if _, err := os.Stat(dir); err == nil {
-		return nil // already exported
+type lineInfoEntry struct {
+	direction string
+	value     int
+}
+
+func getLineInfo() map[int]lineInfoEntry {
+	result := make(map[int]lineInfoEntry)
+
+	out, err := exec.Command("gpioinfo", gpioChip).Output()
+	if err != nil {
+		return result
 	}
-	return os.WriteFile(filepath.Join(gpioBase, "export"), []byte(strconv.Itoa(pin)), 0644)
+
+	for _, line := range strings.Split(string(out), "\n") {
+		// format: "	line   2:      unnamed       input  active-high"
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "line") {
+			continue
+		}
+
+		parts := strings.Fields(line)
+		if len(parts) < 4 {
+			continue
+		}
+
+		numStr := strings.TrimSuffix(parts[1], ":")
+		num, err := strconv.Atoi(numStr)
+		if err != nil {
+			continue
+		}
+
+		direction := "input"
+		for _, p := range parts {
+			if p == "output" {
+				direction = "output"
+				break
+			}
+		}
+
+		entry := lineInfoEntry{direction: direction}
+
+		// try to read current value
+		val, err := readPin(num)
+		if err == nil {
+			entry.value = val
+		}
+
+		result[num] = entry
+	}
+
+	return result
+}
+
+func readPin(pin int) (int, error) {
+	out, err := exec.Command("gpioget", gpioChip, strconv.Itoa(pin)).Output()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(strings.TrimSpace(string(out)))
+}
+
+func ExportPin(pin int) error {
+	// With libgpiod, pins don't need explicit export
+	// Just verify we can read it
+	_, err := readPin(pin)
+	return err
 }
 
 func UnexportPin(pin int) error {
-	return os.WriteFile(filepath.Join(gpioBase, "unexport"), []byte(strconv.Itoa(pin)), 0644)
+	// No-op with libgpiod (no persistent export concept)
+	return nil
 }
 
 func SetDirection(pin int, direction string) error {
 	if direction != "in" && direction != "out" {
 		return fmt.Errorf("direction must be 'in' or 'out'")
 	}
-	if err := ExportPin(pin); err != nil {
-		return err
+	if direction == "out" {
+		// set output with default value 0
+		return exec.Command("gpioset", gpioChip, fmt.Sprintf("%d=0", pin)).Run()
 	}
-	return os.WriteFile(
-		filepath.Join(gpioBase, fmt.Sprintf("gpio%d", pin), "direction"),
-		[]byte(direction), 0644,
-	)
+	// for input, just read to verify
+	_, err := readPin(pin)
+	return err
 }
 
 func SetValue(pin int, value int) error {
 	if value != 0 && value != 1 {
 		return fmt.Errorf("value must be 0 or 1")
 	}
-	return os.WriteFile(
-		filepath.Join(gpioBase, fmt.Sprintf("gpio%d", pin), "value"),
-		[]byte(strconv.Itoa(value)), 0644,
-	)
+	return exec.Command("gpioset", gpioChip, fmt.Sprintf("%d=%d", pin, value)).Run()
 }
 
 func ReadValue(pin int) (int, error) {
-	data, err := os.ReadFile(filepath.Join(gpioBase, fmt.Sprintf("gpio%d", pin), "value"))
-	if err != nil {
-		return 0, err
-	}
-	return strconv.Atoi(strings.TrimSpace(string(data)))
+	return readPin(pin)
 }
