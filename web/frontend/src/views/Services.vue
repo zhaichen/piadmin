@@ -31,16 +31,16 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="flex items-center justify-between mb-6">
+  <div class="p-4 md:p-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
       <h2 class="text-lg font-semibold text-gray-200">Services (systemd)</h2>
-      <div class="flex gap-3">
+      <div class="flex gap-3 w-full sm:w-auto">
         <input
           v-model="filter"
           placeholder="Filter..."
-          class="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+          class="flex-1 sm:flex-initial px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
         />
-        <button @click="load" :disabled="loading" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 rounded-lg transition">
+        <button @click="load" :disabled="loading" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 rounded-lg transition shrink-0">
           Refresh
         </button>
       </div>
@@ -50,7 +50,7 @@ onMounted(load)
       systemd services are only available on Linux
     </div>
 
-    <div v-else class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+    <div v-else class="bg-gray-900 rounded-xl border border-gray-800 overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-gray-500 text-left border-b border-gray-800">

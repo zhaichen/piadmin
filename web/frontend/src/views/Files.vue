@@ -85,10 +85,10 @@ onMounted(() => load())
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="flex items-center justify-between mb-6">
+  <div class="p-4 md:p-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
       <h2 class="text-lg font-semibold text-gray-200">File Manager</h2>
-      <div class="flex gap-2">
+      <div class="flex gap-2 shrink-0">
         <button @click="handleMkdir" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 rounded-lg transition">New Folder</button>
         <button @click="handleUpload" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-sm text-white rounded-lg transition">Upload</button>
         <input ref="fileInput" type="file" multiple class="hidden" @change="onFileSelected" />
@@ -107,7 +107,7 @@ onMounted(() => load())
       </template>
     </div>
 
-    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="text-gray-500 text-left border-b border-gray-800">

@@ -72,6 +72,14 @@ export async function getSnapshot() {
   return request<import('@/types/system').SystemSnapshot>('/system/snapshot')
 }
 
+// Power
+export async function systemPower(action: 'shutdown' | 'reboot') {
+  return request<{ status: string }>('/system/power', {
+    method: 'POST',
+    body: JSON.stringify({ action }),
+  })
+}
+
 // Processes
 export async function getProcesses() {
   return request<import('@/types/process').ProcessInfo[]>('/processes')

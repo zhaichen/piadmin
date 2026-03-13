@@ -19,7 +19,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <div class="flex items-center justify-between mb-6">
       <h2 class="text-lg font-semibold text-gray-200">Network Interfaces</h2>
       <button @click="load" :disabled="loading" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-sm text-gray-300 rounded-lg transition">

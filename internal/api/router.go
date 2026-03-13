@@ -27,6 +27,7 @@ func NewRouter(cfg *config.Config, a *auth.Auth, collector *monitor.Collector, a
 	th := &terminalHandler{}
 	fh := &filesHandler{}
 	gh := &gpioHandler{}
+	pwh := &powerHandler{}
 
 	// public
 	r.Post("/api/auth/login", ah.Login)
@@ -57,6 +58,9 @@ func NewRouter(cfg *config.Config, a *auth.Auth, collector *monitor.Collector, a
 		r.Delete("/api/files", fh.Delete)
 		r.Post("/api/files/mkdir", fh.Mkdir)
 		r.Put("/api/files/rename", fh.Rename)
+
+		// Power
+		r.Post("/api/system/power", pwh.Action)
 
 		// GPIO
 		r.Get("/api/gpio/available", gh.Available)

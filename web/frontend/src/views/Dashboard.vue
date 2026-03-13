@@ -11,7 +11,7 @@ const { data, connected } = useWebSocket()
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <div class="flex items-center gap-3 mb-6">
       <h2 class="text-lg font-semibold text-gray-200">Dashboard</h2>
       <span
