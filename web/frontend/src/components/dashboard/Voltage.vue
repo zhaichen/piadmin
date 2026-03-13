@@ -1,18 +1,22 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import type { VoltageInfo, HistoryEntry } from '@/types/system'
-import { getHistory, clearHistory as apiClearHistory } from '@/api/client'
 import Card from '@/components/common/Card.vue'
 
 use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
 const props = defineProps<{
   voltage: VoltageInfo
+  history?: HistoryEntry[]
+}>()
+
+const emit = defineEmits<{
+  clearHistory: []
 }>()
 
 interface VoltPoint {
@@ -22,16 +26,12 @@ interface VoltPoint {
 
 const historyData = ref<VoltPoint[]>([])
 
-onMounted(async () => {
-  try {
-    const entries = await getHistory()
-    historyData.value = entries
-      .filter(e => e.voltage && e.voltage.core > 0)
-      .map(e => ({ time: e.timestamp, core: e.voltage.core }))
-  } catch {
-    // no history
-  }
-})
+watch(() => props.history, (entries) => {
+  if (!entries) return
+  historyData.value = entries
+    .filter(e => e.voltage && e.voltage.core > 0)
+    .map(e => ({ time: e.timestamp, core: e.voltage.core }))
+}, { immediate: true })
 
 watch(() => props.voltage, (v) => {
   if (!v || v.core <= 0) return
@@ -41,43 +41,37 @@ watch(() => props.voltage, (v) => {
   }
 })
 
-function chartOption() {
-  return {
-    animation: false,
-    grid: { top: 10, right: 10, bottom: 20, left: 40 },
-    tooltip: {
-      trigger: 'axis',
-      formatter: (params: any) => {
-        const time = new Date(params[0].axisValue).toLocaleTimeString()
-        return `${time}<br/>Core: ${params[0].value[1].toFixed(4)}V`
-      },
+const chartOption = computed(() => ({
+  animation: false,
+  grid: { top: 10, right: 10, bottom: 20, left: 40 },
+  tooltip: {
+    trigger: 'axis',
+    formatter: (params: any) => {
+      const time = new Date(params[0].axisValue).toLocaleTimeString()
+      return `${time}<br/>Core: ${params[0].value[1].toFixed(4)}V`
     },
-    xAxis: { type: 'time', show: false },
-    yAxis: {
-      type: 'value',
-      min: (v: any) => Math.floor(v.min * 100) / 100,
-      max: (v: any) => Math.ceil(v.max * 100) / 100,
-      axisLabel: { color: '#9ca3af', fontSize: 10, formatter: '{value}V' },
-    },
-    series: [{
-      name: 'Core',
-      type: 'line',
-      showSymbol: false,
-      lineStyle: { width: 1.5 },
-      color: '#8b5cf6',
-      areaStyle: { color: 'rgba(139, 92, 246, 0.1)' },
-      data: historyData.value.map(p => [p.time, p.core]),
-    }],
-  }
-}
+  },
+  xAxis: { type: 'time', show: false },
+  yAxis: {
+    type: 'value',
+    min: (v: any) => Math.floor(v.min * 100) / 100,
+    max: (v: any) => Math.ceil(v.max * 100) / 100,
+    axisLabel: { color: '#9ca3af', fontSize: 10, formatter: '{value}V' },
+  },
+  series: [{
+    name: 'Core',
+    type: 'line',
+    showSymbol: false,
+    lineStyle: { width: 1.5 },
+    color: '#8b5cf6',
+    areaStyle: { color: 'rgba(139, 92, 246, 0.1)' },
+    data: historyData.value.map(p => [p.time, p.core]),
+  }],
+}))
 
-async function handleClear() {
-  try {
-    await apiClearHistory()
-    historyData.value = []
-  } catch {
-    // ignore
-  }
+function handleClear() {
+  historyData.value = []
+  emit('clearHistory')
 }
 
 interface ThrottleFlag {
@@ -86,7 +80,7 @@ interface ThrottleFlag {
   occurred: boolean
 }
 
-function throttleFlags(): ThrottleFlag[] {
+const throttleFlags = computed<ThrottleFlag[]>(() => {
   const t = props.voltage.throttle
   if (!t) return []
   return [
@@ -95,7 +89,7 @@ function throttleFlags(): ThrottleFlag[] {
     { label: 'Throttled', current: t.throttled, occurred: t.throttled_occurred },
     { label: 'Soft Temp Limit', current: t.soft_temp_limit, occurred: t.soft_temp_limit_occurred },
   ]
-}
+})
 
 function flagClass(f: ThrottleFlag): string {
   if (f.current) return 'bg-red-900/50 text-red-400 border-red-800'
@@ -125,9 +119,9 @@ function flagClass(f: ThrottleFlag): string {
       </div>
     </div>
 
-    <div v-if="throttleFlags().length > 0" class="mt-3 flex flex-wrap gap-1.5">
+    <div v-if="throttleFlags.length > 0" class="mt-3 flex flex-wrap gap-1.5">
       <span
-        v-for="f in throttleFlags()"
+        v-for="f in throttleFlags"
         :key="f.label"
         class="text-xs px-2 py-0.5 rounded border"
         :class="flagClass(f)"
@@ -137,7 +131,7 @@ function flagClass(f: ThrottleFlag): string {
     </div>
 
     <div v-if="historyData.length > 1" class="mt-3">
-      <VChart :option="chartOption()" autoresize style="height: 120px" />
+      <VChart :option="chartOption" autoresize style="height: 120px" />
       <div class="flex justify-end mt-1">
         <button
           class="text-xs text-gray-500 hover:text-gray-300 transition-colors"

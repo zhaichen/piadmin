@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { getHistory, clearHistory as apiClearHistory } from '@/api/client'
+import type { HistoryEntry } from '@/types/system'
 import SystemInfo from '@/components/dashboard/SystemInfo.vue'
 import CpuGauge from '@/components/dashboard/CpuGauge.vue'
 import MemoryBar from '@/components/dashboard/MemoryBar.vue'
@@ -9,6 +12,25 @@ import Temperature from '@/components/dashboard/Temperature.vue'
 import Voltage from '@/components/dashboard/Voltage.vue'
 
 const { data, connected } = useWebSocket()
+
+const history = ref<HistoryEntry[]>([])
+
+onMounted(async () => {
+  try {
+    history.value = await getHistory()
+  } catch {
+    // no history
+  }
+})
+
+async function handleClearHistory() {
+  try {
+    await apiClearHistory()
+    history.value = []
+  } catch {
+    // ignore
+  }
+}
 </script>
 
 <template>
@@ -30,8 +52,8 @@ const { data, connected } = useWebSocket()
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
         <CpuGauge :cpu="data.cpu" />
         <MemoryBar :memory="data.memory" />
-        <Temperature :temperatures="data.temperature" />
-        <Voltage v-if="data.voltage && data.voltage.core > 0" :voltage="data.voltage" />
+        <Temperature :temperatures="data.temperature" :history="history" @clear-history="handleClearHistory" />
+        <Voltage v-if="data.voltage && data.voltage.core > 0" :voltage="data.voltage" :history="history" @clear-history="handleClearHistory" />
         <DiskUsage :disks="data.disks" />
         <NetworkTraffic :network="data.network" class="md:col-span-2 xl:col-span-2" />
       </div>
